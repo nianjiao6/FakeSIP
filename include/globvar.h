@@ -52,4 +52,8 @@ struct fs_context {
 
 extern struct fs_context g_ctx;
 
+/* connbytes 模块可用性（自动检测） */
+extern int g_ipt4_connbytes_available; /* IPv4 iptables */
+extern int g_ipt6_connbytes_available; /* IPv6 ip6tables */
+
 #endif /* FS_GLOBVAR_H */

@@ -46,3 +46,7 @@ struct fs_context g_ctx = {.exit = 0,
                            /* -x */ .fwmask = 0,
                            /* -y */ .dynamic_pct = 0,
                            /* -z */ .use_iptables = 0};
+
+/* connbytes 模块可用性（自动检测） */
+int g_ipt4_connbytes_available = 0; /* IPv4 iptables */
+int g_ipt6_connbytes_available = 0; /* IPv6 ip6tables */

@@ -129,30 +129,8 @@ int fs_ipt6_setup(void)
          "--mark", xmark_str, "-j", "RETURN", NULL},
 
         /*
-            send to nfqueue
-        */
-        {"ip6tables",
-         "-w",
-         "-t",
-         "mangle",
-         "-A",
-         "FAKESIP_R",
-         "-p",
-         "udp",
-         "-m",
-         "connbytes",
-         "--connbytes",
-         "1:5",
-         "--connbytes-dir",
-         "both",
-         "--connbytes-mode",
-         "packets",
-         "-j",
-         "NFQUEUE",
-         "--queue-bypass",
-         "--queue-num",
-         nfqnum_str,
-         NULL}};
+            send to nfqueue (根据系统支持情况动态添加)
+        */};
 
     ipt_cmds_cnt = sizeof(ipt_cmds) / sizeof(*ipt_cmds);
 
@@ -177,6 +155,45 @@ int fs_ipt6_setup(void)
             E(T(fs_execute_command));
             return -1;
         }
+    }
+
+    /* 根据系统支持情况，添加 NFQUEUE 规则 */
+    if (g_ipt6_connbytes_available) {
+        /* 使用 connbytes 限制（前1-5个包） */
+        char *nfq_rule[] = {"ip6tables",
+                            "-w",
+                            "-t",
+                            "mangle",
+                            "-A",
+                            "FAKESIP_R",
+                            "-p",
+                            "udp",
+                            "-m",
+                            "connbytes",
+                            "--connbytes",
+                            "1:5",
+                            "--connbytes-dir",
+                            "both",
+                            "--connbytes-mode",
+                            "packets",
+                            "-j",
+                            "NFQUEUE",
+                            "--queue-bypass",
+                            "--queue-num",
+                            nfqnum_str,
+                            NULL};
+        res = fs_execute_command(nfq_rule, 0, NULL);
+    } else {
+        /* 不使用 connbytes（处理所有UDP包） */
+        char *nfq_rule[] = {
+            "ip6tables",      "-w",          "-t",       "mangle", "-A",
+            "FAKESIP_R",      "-p",          "udp",      "-j",     "NFQUEUE",
+            "--queue-bypass", "--queue-num", nfqnum_str, NULL};
+        res = fs_execute_command(nfq_rule, 0, NULL);
+    }
+    if (res < 0) {
+        E(T(fs_execute_command));
+        return -1;
     }
 
     res = ipt6_iface_setup();

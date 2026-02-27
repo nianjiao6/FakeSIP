@@ -37,6 +37,36 @@ static int nft_is_working(void)
     return !fs_execute_command(nft_ver_cmd, 1, NULL);
 }
 
+/* 检测 iptables connbytes 模块是否可用 */
+static int check_ipt4_connbytes(void)
+{
+    char *test_cmd[] = {"iptables", "-m", "connbytes", "--help", NULL};
+
+    if (!fs_execute_command(test_cmd, 1, NULL)) {
+        E("INFO: IPv4 iptables connbytes module is available.");
+        return 1;
+    } else {
+        E("WARNING: IPv4 iptables connbytes module not available, using "
+          "simplified rules.");
+        return 0;
+    }
+}
+
+/* 检测 ip6tables connbytes 模块是否可用 */
+static int check_ipt6_connbytes(void)
+{
+    char *test_cmd[] = {"ip6tables", "-m", "connbytes", "--help", NULL};
+
+    if (!fs_execute_command(test_cmd, 1, NULL)) {
+        E("INFO: IPv6 ip6tables connbytes module is available.");
+        return 1;
+    } else {
+        E("WARNING: IPv6 ip6tables connbytes module not available, using "
+          "simplified rules.");
+        return 0;
+    }
+}
+
 
 int fs_nfrules_setup(void)
 {
@@ -51,6 +81,16 @@ int fs_nfrules_setup(void)
         E("WARNING: Falling back to iptables command, as nft command is not "
           "working.");
         g_ctx.use_iptables = 1;
+    }
+
+    /* 检测 connbytes 模块（只在需要使用 iptables 时） */
+    if (g_ctx.use_iptables) {
+        if (g_ctx.use_ipv4) {
+            g_ipt4_connbytes_available = check_ipt4_connbytes();
+        }
+        if (g_ctx.use_ipv6) {
+            g_ipt6_connbytes_available = check_ipt6_connbytes();
+        }
     }
 
     if (g_ctx.use_iptables) {
